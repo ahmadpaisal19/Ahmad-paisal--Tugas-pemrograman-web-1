@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tugas Pertemuan 14 - CRUD Dashboard</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .navbar-brand { font-weight: 700; letter-spacing: 0.5px; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .card-header { font-weight: 600; border-top-left-radius: 12px !important; border-top-right-radius: 12px !important; }
+        .table { vertical-align: middle; }
+        .table-hover tbody tr:hover { background-color: #f8fafc; transition: 0.2s; }
+        .btn { border-radius: 8px; font-weight: 500; }
+    </style>
+</head>
+<body>
+
+<!-- Navbar Atas -->
+<nav class="navbar navbar-dark bg-dark mb-4 shadow-sm">
+    <div class="container">
+        <span class="navbar-brand mb-0 h1"><i class="fa-solid Nav-icon fa-database me-2 text-warning"></i>Web-1 CRUD System</span>
+        <span class="navbar-text text-white-50 d-none d-sm-block">Tugas Pertemuan 14</span>
+    </div>
+</nav>
+
+<div class="container">
+    <div class="row g-4">
+        <!-- Panel Form Input -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white py-3">
+                    <i class="fa-solid fa-pen-to-square me-2"></i><span id="formTitle">Tambah Produk</span>
+                </div>
+                <div class="card-body p-4">
+                    <form id="crudForm">
+                        <input type="hidden" id="itemIndex">
+                        
+                        <div class="mb-3">
+                            <label for="kode" class="form-label fw-bold small text-secondary">KODE PRODUK</label>
+                            <input type="text" class="form-control form-control-lg bg-light" id="kode" required placeholder="Contoh: BRG-01">
+                        </div>
+                        <div class="mb-3">
+                            <label for="nama" class="form-label fw-bold small text-secondary">NAMA PRODUK</label>
+                            <input type="text" class="form-control form-control-lg bg-light" id="nama" required placeholder="Masukkan nama barang">
+                        </div>
+                        <div class="mb-3">
+                            <label for="kategori" class="form-label fw-bold small text-secondary">KATEGORI</label>
+                            <select class="form-select form-control-lg bg-light" id="kategori" required>
+                                <option value="" selected disabled>Pilih Kategori</option>
+                                <option value="Elektronik">Elektronik</option>
+                                <option value="Gaming">Gaming</option>
+                                <option value="Pakaian">Pakaian</option>
+                            </select>
+                        </div>
+                        <div class="mb-4">
+                            <label for="stok" class="form-label fw-bold small text-secondary">STATUS STOK</label>
+                            <select class="form-select form-control-lg bg-light" id="stok" required>
+                                <option value="Tersedia">Tersedia</option>
+                                <option value="Kosong">Kosong</option>
+                            </select>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success w-100 py-2.5" id="btnSubmit">
+                            <i class="fa-solid fa-floppy-disk me-2"></i>Simpan Produk
+                        </button>
+                        <button type="button" class="btn btn-secondary w-100 mt-2 py-2.5 d-none" id="btnCancel" onclick="resetForm()">
+                            Batal
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Datatable -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-white text-dark py-3 d-flex justify-content-between align-middle">
+                    <span class="align-self-center fs-5 fw-bold"><i class="fa-solid fa-list me-2 text-primary"></i>Stok Inventaris</span>
+                    <span class="badge bg-secondary p-2 align-self-center" id="totalData">Total: 0 Item</span>
+                </div>
+                <div class="card-body p-0 table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light text-secondary small uppercase fw-bold">
+                            <tr>
+                                <th class="ps-4">NO</th>
+                                <th>KODE</th>
+                                <th>NAMA BARANG</th>
+                                <th>KATEGORI</th>
+                                <th>STATUS</th>
+                                <th class="text-center pe-4">AKSI</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dataTableBody">
+                            <!-- Data dimuat di sini -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript Core Logic -->
+<script>
+    // Data awal untuk contoh awal sistem berjalan
+    let dataBarang = [
+        { kode: "BRG-01", nama: "Mouse Gaming RGB", kategori: "Gaming", stok: "Tersedia" },
+        { kode: "BRG-02", nama: "Keyboard Mechanical", kategori: "Gaming", stok: "Kosong" }
+    ];
+
+    const form = document.getElementById('crudForm');
+    const dataTableBody = document.getElementById('dataTableBody');
+    const formTitle = document.getElementById('formTitle');
+    const btnSubmit = document.getElementById('btnSubmit');
+    const btnCancel = document.getElementById('btnCancel');
+    const itemIndexInput = document.getElementById('itemIndex');
+    const totalDataBadge = document.getElementById('totalData');
+
+    // 1. READ: Menampilkan data ke dalam tabel HTML
+    function renderTable() {
+        dataTableBody.innerHTML = "";
+        totalDataBadge.innerText = `Total: ${dataBarang.length} Item`;
+        
+        if (dataBarang.length === 0) {
+            dataTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-5">Belum ada inventaris barang.</td></tr>`;
+            return;
+        }
+
+        dataBarang.forEach((item, index) => {
+            // Tampilan badge status stok
+            const badgeColor = item.stok === 'Tersedia' ? 'bg-success' : 'bg-danger';
+            
+            const row = `
+                <tr>
+                    <td class="ps-4 text-secondary font-monospace">${index + 1}</td>
+                    <td class="fw-bold">${item.kode}</td>
+                    <td>${item.nama}</td>
+                    <td><span class="badge bg-light text-dark border">${item.kategori}</span></td>
+                    <td><span class="badge ${badgeColor}">${item.stok}</span></td>
+                    <td class="text-center pe-4">
+                        <button class="btn btn-outline-warning btn-sm me-1" onclick="editData(${index})">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="deleteData(${index})">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+            dataTableBody.innerHTML += row;
+        });
+    }
+
+    // 2. CREATE & UPDATE: Proses simpan/edit form data
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const kode = document.getElementById('kode').value;
+        const nama = document.getElementById('nama').value;
+        const kategori = document.getElementById('kategori').value;
+        const stok = document.getElementById('stok').value;
+        const index = itemIndexInput.value;
+
+        if (index === "") {
+            // Jika index kosong, tandanya membuat data baru (CREATE)
+            dataBarang.push({ kode, nama, kategori, stok });
+        } else {
+            // Jika index ada serves, tandanya memperbarui data lama (UPDATE)
+            dataBarang[index] = { kode, nama, kategori, stok };
+        }
+
+        resetForm();
+        renderTable();
+    });
+
+    // 3. EDIT TRIGGER: Mengisi form dengan data lama sebelum di-update
+    function editData(index) {
+        const item = dataBarang[index];
+        document.getElementById('kode').value = item.kode;
+        document.getElementById('nama').value = item.nama;
+        document.getElementById('kategori').value = item.kategori;
+        document.getElementById('stok').value = item.stok;
+        
+        itemIndexInput.value = index;
+        formTitle.innerText = "Edit Produk";
+        btnSubmit.innerHTML = "<i class='fa-solid fa-pen-to-square me-2'></i>Update Produk";
+        btnSubmit.className = "btn btn-warning w-100 py-2.5";
+        btnCancel.classList.remove('d-none');
+    }
+
+    // 4. DELETE: Menghapus data dari array berdasarkan nomor indeksnya
+    function deleteData(index) {
+        if (confirm("Hapus item ini dari inventaris?")) {
+            dataBarang.splice(index, 1);
+            resetForm();
+            renderTable();
+        }
+    }
+
+    // 5. RESET: Mengembalikan form ke kondisi kosong semula
+    function resetForm() {
+        form.reset();
+        itemIndexInput.value = "";
+        formTitle.innerText = "Tambah Produk";
+        btnSubmit.innerHTML = "<i class='fa-solid fa-floppy-disk me-2'></i>Simpan Produk";
+        btnSubmit.className = "btn btn-success w-100 py-2.5";
+        btnCancel.classList.add('d-none');
+    }
+
+    // Panggil fungsi utama saat pertama kali halaman dibuka
+    renderTable();
+</script>
+
+<!-- Bootstrap Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
